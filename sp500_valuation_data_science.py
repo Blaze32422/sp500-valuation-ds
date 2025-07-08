@@ -47,8 +47,9 @@ def load_data(uploaded_file=None):
         if uploaded_file:
             df = pd.read_csv(uploaded_file, thousands=',', na_values=['', 'nan'])
             required_columns = ['Symbol', 'Shortname', 'Sector', 'Currentprice', 'Marketcap', 'Ebitda', 'Revenuegrowth']
-            if not all(col in df.columns for col in required_columns):
-                st.error("Uploaded CSV must contain columns: Symbol, Shortname, Sector, Currentprice, Marketcap, Ebitda, Revenuegrowth")
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                st.error(f"Uploaded CSV is missing columns: {missing_cols}")
                 return pd.DataFrame()
         else:
             # Convert fake_stock_info to DataFrame
@@ -57,7 +58,7 @@ def load_data(uploaded_file=None):
                 data.append({
                     'Symbol': ticker,
                     'Shortname': ticker,
-                    'Sector': 'Technology',  # Assuming Technology for simplicity
+                    'Sector': 'Technology',
                     'P/E': info.get("trailingPE"),
                     'PEG': info.get("pegRatio"),
                     'P/B': info.get("priceToBook"),
@@ -67,11 +68,26 @@ def load_data(uploaded_file=None):
                     'DividendYield': info.get("dividendYield") * 100 if info.get("dividendYield") else None
                 })
             df = pd.DataFrame(data)
-        df = df.dropna(subset=['P/E', 'EPS', 'MarketCap', 'ROE'])
-        df['P/E'] = df['P/E'].astype(float)
-        df['EPS'] = df['EPS'].astype(float)
-        df['MarketCap'] = df['MarketCap'].astype(float)
-        df['ROE'] = df['ROE'].astype(float)
+        
+        # Debug: Display DataFrame columns
+        st.write("**Debug: DataFrame Columns**", df.columns.tolist())
+        
+        # Check for required columns
+        required_metrics = ['P/E', 'EPS', 'MarketCap', 'ROE']
+        missing_metrics = [col for col in required_metrics if col not in df.columns]
+        if missing_metrics:
+            st.error(f"DataFrame is missing required columns: {missing_metrics}")
+            return pd.DataFrame()
+        
+        # Clean data
+        df = df.dropna(subset=required_metrics)
+        for col in required_metrics:
+            try:
+                df[col] = df[col].astype(float)
+            except Exception as e:
+                st.error(f"Error converting column {col} to float: {e}")
+                return pd.DataFrame()
+        
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")

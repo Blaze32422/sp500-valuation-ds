@@ -7,7 +7,7 @@ from jinja2 import Template
 from io import BytesIO
 
 # Set plotting style
-plt.style.use('seaborn')
+plt.style.use('seaborn-v0_8')
 sns.set_palette("deep")
 
 # Simulated stock data

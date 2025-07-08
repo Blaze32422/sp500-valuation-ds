@@ -51,6 +51,11 @@ def load_data(uploaded_file=None):
             if missing_cols:
                 st.error(f"Uploaded CSV is missing columns: {missing_cols}")
                 return pd.DataFrame()
+            # Map CSV columns to required metrics
+            df['P/E'] = df['Currentprice'] / df['Ebitda']  # Simplified P/E calculation
+            df['EPS'] = df['Ebitda'] / 1000000  # Simplified EPS
+            df['MarketCap'] = df['Marketcap']
+            df['ROE'] = df['Revenuegrowth'] * 100  # Simplified ROE
         else:
             # Convert fake_stock_info to DataFrame
             data = []
@@ -69,7 +74,8 @@ def load_data(uploaded_file=None):
                 })
             df = pd.DataFrame(data)
         
-        # Debug: Display DataFrame columns
+        # Debug: Display raw DataFrame and columns
+        st.write("**Debug: Raw DataFrame**", df)
         st.write("**Debug: DataFrame Columns**", df.columns.tolist())
         
         # Check for required columns
@@ -88,6 +94,8 @@ def load_data(uploaded_file=None):
                 st.error(f"Error converting column {col} to float: {e}")
                 return pd.DataFrame()
         
+        # Debug: Display cleaned DataFrame
+        st.write("**Debug: Cleaned DataFrame**", df)
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -253,53 +261,4 @@ def main():
     
     st.title("S&P 500 Valuation Analysis for Data Science")
     st.write("""
-    This tool ranks S&P 500 companies by value per EPS, using a score based on P/E ratio, ROE, and market cap. Upload a CSV file (columns: Symbol, Shortname, Sector, Currentprice, Marketcap, Ebitda, Revenuegrowth) or use default data.
-    """)
-
-    # File uploader
-    uploaded_file = st.file_uploader("Upload sp500_companies.csv", type="csv")
-    df = load_data(uploaded_file=uploaded_file)
-
-    if not df.empty:
-        # Perform EDA
-        perform_eda(df)
-
-        # Process and filter data
-        df = calculate_valuation_metrics(df)
-        filtered_df = filter_data(df)
-
-        # Display top 10
-        st.subheader("Top 10 Value Stocks")
-        top10 = filtered_df.head(10)
-        st.dataframe(
-            top10[['Symbol', 'Shortname', 'Sector', 'P/E', 'ROE', 'EPS', 'MarketCap', 'ValueScore']]
-            .round(2)
-        )
-
-        # Sector counts
-        sector_counts = top10['Sector'].value_counts().to_dict()
-        st.write(f"**Insight**: Technology sector dominates with {sector_counts.get('Technology', 0)} of the top 10 companies.")
-
-        # Visualizations
-        st.subheader("Value Scores of Top 10 Companies")
-        bar_plot_bytes = plot_value_scores(top10)
-        st.image(bar_plot_bytes, use_column_width=True)
-
-        st.subheader("P/E vs EPS")
-        top20 = filtered_df.head(20)
-        scatter_plot_bytes = plot_eps_trend(top20)
-        st.image(scatter_plot_bytes, use_column_width=True)
-
-        # Download HTML report
-        st.subheader("Download Report")
-        generate_html_report(top10, top20, sector_counts, bar_plot_bytes, scatter_plot_bytes)
-        with open('sp500_valuation_report.html', 'rb') as f:
-            st.download_button(
-                label="Download HTML Report",
-                data=f,
-                file_name="sp500_valuation_report.html",
-                mime="text/html"
-            )
-
-if __name__ == "__main__":
-    main()
+    This tool ranks S&P 500 companies by value per EPS, using a score based on P/E ratio, ROE, and market cap. Upload a CSV file (columns: Symbol, Short
